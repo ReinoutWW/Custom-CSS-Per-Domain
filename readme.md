@@ -1,20 +1,33 @@
-# Custom CSS Per Domain
+# Description
+Tired of websites that don’t look quite right? With Custom CSS Per Domain, you can redefine any page’s appearance to suit your taste—no more squinting at tiny text or enduring clashing color palettes. Plus, it’s not just for casual browsing: developers can leverage it to quickly test out new site styles on the fly, without touching live code.
 
-**Also tired of ugly websites? Me too—let's fix them!**  
-With *Custom CSS Per Domain*, you can easily inject personalized styles into any site you visit. No more cluttered layouts, tiny fonts, or glaring color schemes—take control and make the web work for *you*.
+## Why You’ll Love It
 
-## How It Works
+### 1. Personalize Every Site
 
-1. **Install the Extension**: Load it in Chrome via `chrome://extensions` (Developer mode).
-2. **Open the Popup**: Click on the extension icon to reveal the simple interface.
-3. **Add Your Own CSS**:  
-   - In the *Domain* field, either type the domain (e.g., `www.example.com`) or accept the default (which auto-populates from your current tab).  
-   - In the *CSS* field, paste or type your custom rules (e.g., `body { background: #fafafa !important; }`).  
-4. **Save**: Hit the **“Save / Update”** button, and voilà—your new styles are instantly applied whenever you visit that domain.  
+Alter fonts, colors, layouts—whatever you need to make a site more readable or aesthetically pleasing.
 
-Checkout the **Preview** section to see more examples and screenshots of how easy it is to create your own custom web experience.
+### 2. Perfect for Quick Styling Experiments
+
+Thinking of refreshing your website’s design? Use this extension as a sandbox to instantly inject and test your CSS changes—before you commit them to production.
+
+### 3. Multiple Styles per Domain
+
+Group your style tweaks under different tags (e.g., “dark-mode,” “banner-removal”). Easily enable or disable them as needed.
+
+### 4. Search & Filter
+
+Locate specific domain or tag entries in seconds—no endless scrolling through a giant list.
+
+### 5. Enable/Disable On Demand
+
+Keep certain CSS rules off while you experiment, then flip them on to see the magic happen.
+Custom CSS Per Domain brings the best of both worlds—instant website makeovers for power users and a convenient testing tool for developers. Try it now and take control of how every site looks—whether it’s for polished personal browsing or a developer’s styling sandbox!
 
 ## Preview
-![image](https://github.com/user-attachments/assets/b1ab8f8b-1f40-4b86-bfe8-f9d222a2778d)
+![image](https://github.com/user-attachments/assets/0578c547-818b-4856-a19d-f82c92dfdbf1)
 
 Everyone happy!
+
+## Demo
+[![Watch this video on YouTube](https://img.youtube.com/vi/X5iAAoylJzM/0.jpg)](https://www.youtube.com/watch?v=X5iAAoylJzM)
