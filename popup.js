@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Set the placeholder to the domain
             const domainInput = document.getElementById('domainInput');
             domainInput.placeholder = domain;
+            domainInput.value = domain;
             
             console.log(`[POPUP] Set domain placeholder to: ${domain}`);
           } catch (err) {
