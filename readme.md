@@ -12,9 +12,9 @@ With *Custom CSS Per Domain*, you can easily inject personalized styles into any
    - In the *CSS* field, paste or type your custom rules (e.g., `body { background: #fafafa !important; }`).  
 4. **Save**: Hit the **“Save / Update”** button, and voilà—your new styles are instantly applied whenever you visit that domain.  
 
-![image](https://github.com/user-attachments/assets/c8099373-41a7-4d10-b449-4092a8713e7e)
+Checkout the **Preview** section to see more examples and screenshots of how easy it is to create your own custom web experience.
 
-
-Checkout the **Pages** section to see more examples and screenshots of how easy it is to create your own custom web experience.
+## Preview
+![image](https://github.com/user-attachments/assets/b1ab8f8b-1f40-4b86-bfe8-f9d222a2778d)
 
 Everyone happy!
