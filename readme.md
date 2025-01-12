@@ -25,7 +25,7 @@ Keep certain CSS rules off while you experiment, then flip them on to see the ma
 Custom CSS Per Domain brings the best of both worlds—instant website makeovers for power users and a convenient testing tool for developers. Try it now and take control of how every site looks—whether it’s for polished personal browsing or a developer’s styling sandbox!
 
 ## Preview
-![image](https://github.com/user-attachments/assets/b1ab8f8b-1f40-4b86-bfe8-f9d222a2778d)
+![image](https://github.com/user-attachments/assets/0578c547-818b-4856-a19d-f82c92dfdbf1)
 
 Everyone happy!
 
