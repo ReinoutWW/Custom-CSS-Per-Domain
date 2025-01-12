@@ -42,13 +42,20 @@
         margin-bottom: 16px;
       }
 
-      .form-container {
+      .form-row {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+
+      .half-width {
+        flex: 1;
         display: flex;
         flex-direction: column;
       }
 
       .input-label {
-        margin-bottom: 6px;
+        margin-bottom: 10px;
         font-size: 14px;
         font-weight: 600;
       }
@@ -57,7 +64,7 @@
       textarea {
         width: 100%;
         box-sizing: border-box;
-        margin-bottom: 12px;
+        margin-bottom: 0; /* We'll rely on .form-row gap or manual spacing */
         padding: 8px;
         border: 1px solid #ccc;
         border-radius: var(--border-radius);
@@ -146,13 +153,17 @@
       /* Active domain styling */
       .active-domain {
         border: 1px solid var(--accent-color);
-        /* Could add a subtle highlight, e.g.: */
-        background: #eaf2fb; /* very light bluish */
+        background: #eaf2fb; /* Light bluish highlight */
       }
 
       /* Inactive domain styling */
       .inactive-domain {
-        opacity: 0.5; /* Grayed-out effect */
+        opacity: 0.5;
+      }
+
+      .btn-primary {
+        margin-top: 1rem;
+        width: 100%;
       }
     </style>
   </head>
@@ -160,20 +171,26 @@
     <h2>Custom CSS Per Domain</h2>
 
     <div class="container">
-      <div class="form-container">
-        <label class="input-label" for="domainInput">Domain:</label>
-        <input type="text" id="domainInput" placeholder="e.g. www.example.com" />
+      <div class="form-row">
+        <div class="half-width">
+          <label class="input-label" for="domainInput">Domain</label>
+          <input type="text" id="domainInput" placeholder="e.g. www.example.com" />
+        </div>
+        <div class="half-width">
+          <label class="input-label" for="tagInput">Tag</label>
+          <input type="text" id="tagInput" placeholder="e.g. dark-mode" />
+        </div>
+      </div>
 
-        <label class="input-label" for="cssInput">CSS:</label>
+        <label class="input-label" for="cssInput">CSS</label>
         <textarea id="cssInput" placeholder="Enter your CSS here"></textarea>
 
-        <button id="saveBtn">Save / Update</button>
-      </div>
+        <button class="btn-primary" id="saveBtn">Save / Update</button>
     </div>
 
-    <h3>Active Domains</h3>
+    <h3>Domains</h3>
     <div class="search-container">
-      <input type="text" id="searchInput" placeholder="Search by domain..." />
+      <input type="text" id="searchInput" placeholder="Search domain or tag..." />
     </div>
     <div id="domainList" class="domain-list"></div>
 

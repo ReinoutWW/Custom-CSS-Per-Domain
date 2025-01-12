@@ -12,10 +12,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (activeTab.url) {
         try {
           const url = new URL(activeTab.url);
-          activeTabDomain = url.host; // store globally
+          // Force lowercase to match background.js
+          activeTabDomain = url.host.toLowerCase();
           console.log(`[POPUP] Active Tab Domain: ${activeTabDomain}`);
 
-          // also set the placeholder to the domain
           const domainInput = document.getElementById('domainInput');
           domainInput.placeholder = activeTabDomain;
           domainInput.value = activeTabDomain;
@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     }
-    // After capturing the active tab domain, load the domain list
     loadAndDisplayDomains();
   });
 
@@ -35,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+// -------------------------------------------------------------
+// LOAD & DISPLAY
+// -------------------------------------------------------------
 function loadAndDisplayDomains(searchTerm = '') {
   chrome.storage.local.get(null, (items) => {
     if (chrome.runtime.lastError) {
@@ -47,109 +49,111 @@ function loadAndDisplayDomains(searchTerm = '') {
     const domainListDiv = document.getElementById('domainList');
     domainListDiv.innerHTML = ''; // Clear current list
 
-    let entries = Object.entries(items);
+    let entries = Object.entries(items); 
+    // e.g. [ [domain, [ { tag, css, enabled }, ... ] ], ...]
 
-    // Filter
+    // 1) Filter by domain or tag if needed
     if (searchTerm.trim()) {
       const lowerSearch = searchTerm.toLowerCase();
-      entries = entries.filter(([domain]) =>
-        domain.toLowerCase().includes(lowerSearch)
-      );
+      entries = entries
+        .map(([domain, scripts]) => {
+          const domainMatches = domain.toLowerCase().includes(lowerSearch);
+          // Keep scripts if domain matches or tag matches
+          const filteredScripts = scripts.filter((item) =>
+            domainMatches ||
+            (item.tag && item.tag.toLowerCase().includes(lowerSearch))
+          );
+          return [domain, filteredScripts];
+        })
+        .filter(([_, filteredScripts]) => filteredScripts.length > 0);
     }
 
-    // Sort - active domain first
-    entries.sort((a, b) => {
-      if (a[0] === activeTabDomain) return -1;
-      if (b[0] === activeTabDomain) return 1;
-      return a[0].localeCompare(b[0]);
+    // 2) Sort so the active domain is first
+    entries.sort(([domainA], [domainB]) => {
+      if (domainA === activeTabDomain) return -1;
+      if (domainB === activeTabDomain) return 1;
+      return domainA.localeCompare(domainB);
     });
 
     if (entries.length === 0) {
-      domainListDiv.innerText = 'No domains saved yet.';
+      domainListDiv.innerText = 'No domains (or tags) found.';
       return;
     }
 
-    for (const [domain, data] of entries) {
-      // data might be string (old format) or { css, enabled }
-      let css = '';
-      let enabled = true;
+    // 3) Build UI
+    for (const [domain, scripts] of entries) {
+      if (!Array.isArray(scripts) || scripts.length === 0) continue;
+      scripts.forEach((item) => {
+        const { tag, css, enabled } = item;
+        const domainItem = document.createElement('div');
+        domainItem.className = 'domain-item';
 
-      if (typeof data === 'string') {
-        css = data;
-      } else if (typeof data === 'object') {
-        css = data.css || '';
-        enabled = data.enabled !== false;
-      }
+        // Highlight if matches active tab domain
+        if (domain === activeTabDomain) {
+          domainItem.classList.add('active-domain');
+        } else {
+          domainItem.classList.add('inactive-domain');
+        }
 
-      // Domain item container
-      const domainItem = document.createElement('div');
-      domainItem.className = 'domain-item';
+        // Header
+        const header = document.createElement('div');
+        header.className = 'domain-header';
 
-      // If domain matches the active tab, highlight it; otherwise, gray it out
-      if (domain === activeTabDomain) {
-        domainItem.classList.add('active-domain');
-      } else {
-        domainItem.classList.add('inactive-domain');
-      }
+        const checkboxAndName = document.createElement('div');
+        checkboxAndName.className = 'checkbox-and-name';
 
-      // Header row
-      const header = document.createElement('div');
-      header.className = 'domain-header';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = enabled !== false;
 
-      // Checkbox + domain name
-      const checkboxAndName = document.createElement('div');
-      checkboxAndName.className = 'checkbox-and-name';
-
-      // The enable/disable checkbox
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.checked = enabled;
-      checkbox.addEventListener('change', () => {
-        const newData = { css, enabled: checkbox.checked };
-        chrome.storage.local.set({ [domain]: newData }, () => {
-          if (chrome.runtime.lastError) {
-            console.error('[POPUP] Error toggling enabled:', chrome.runtime.lastError);
-          } else {
-            console.log(`[POPUP] Toggled ${domain} to enabled=${checkbox.checked}`);
-          }
+        checkbox.addEventListener('change', () => {
+          toggleEnabled(domain, tag, checkbox.checked);
         });
+
+        // Display "domain | tag"
+        const domainName = document.createElement('span');
+        domainName.className = 'domain-name';
+        domainName.textContent = tag
+          ? `${domain} | ${tag}`
+          : domain;
+
+        checkboxAndName.appendChild(checkbox);
+        checkboxAndName.appendChild(domainName);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-button';
+        deleteBtn.textContent = 'Delete';
+        deleteBtn.addEventListener('click', () => {
+          handleDelete(domain, tag);
+        });
+
+        header.appendChild(checkboxAndName);
+        header.appendChild(deleteBtn);
+
+        // CSS content
+        const cssContent = document.createElement('div');
+        cssContent.className = 'css-content';
+        cssContent.textContent = css;
+
+        domainItem.appendChild(header);
+        domainItem.appendChild(cssContent);
+        domainListDiv.appendChild(domainItem);
       });
-
-      const domainName = document.createElement('span');
-      domainName.className = 'domain-name';
-      domainName.textContent = domain;
-
-      checkboxAndName.appendChild(checkbox);
-      checkboxAndName.appendChild(domainName);
-
-      // Delete button
-      const deleteBtn = document.createElement('button');
-      deleteBtn.className = 'delete-button';
-      deleteBtn.textContent = 'Delete';
-      deleteBtn.addEventListener('click', () => handleDeleteDomain(domain));
-
-      header.appendChild(checkboxAndName);
-      header.appendChild(deleteBtn);
-
-      // CSS content
-      const cssContent = document.createElement('div');
-      cssContent.className = 'css-content';
-      cssContent.textContent = css;
-
-      // Build final structure
-      domainItem.appendChild(header);
-      domainItem.appendChild(cssContent);
-      domainListDiv.appendChild(domainItem);
     }
   });
 }
 
-// SAVE/UPDATE
+// -------------------------------------------------------------
+// SAVE / UPDATE (BUG #1 FIX: Overwrite if same domain+tag)
+// -------------------------------------------------------------
 document.getElementById('saveBtn').addEventListener('click', () => {
   const domainInput = document.getElementById('domainInput');
+  const tagInput = document.getElementById('tagInput');
   const cssInput = document.getElementById('cssInput');
 
-  const domain = domainInput.value.trim();
+  // Lowercase domain to avoid mismatches
+  const domain = domainInput.value.trim().toLowerCase();
+  const tag = tagInput.value.trim().toLowerCase(); // Optionally lower as well
   const css = cssInput.value;
 
   if (!domain) {
@@ -161,31 +165,117 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     return;
   }
 
-  // Always store in the new format
-  const data = { css, enabled: true };
-
-  console.log(`[POPUP] Saving CSS for domain "${domain}":`, css);
-
-  chrome.storage.local.set({ [domain]: data }, () => {
+  // Get existing array for this domain
+  chrome.storage.local.get(domain, (result) => {
     if (chrome.runtime.lastError) {
-      console.error('[POPUP] Storage set error:', chrome.runtime.lastError);
+      console.error('[POPUP] Storage get error:', chrome.runtime.lastError);
       return;
     }
 
-    alert(`Saved CSS for "${domain}"`);
-    loadAndDisplayDomains(document.getElementById('searchInput').value);
+    let existingArray = result[domain];
+    if (!Array.isArray(existingArray)) {
+      existingArray = [];
+    }
+
+    // Check if there's already an item with the same tag
+    const existingItem = existingArray.find((item) => item.tag === tag);
+    if (existingItem) {
+      // Overwrite that item’s CSS & re-enable it
+      existingItem.css = css;
+      existingItem.enabled = true;
+      console.log(`[POPUP] Overwriting existing domain="${domain}" tag="${tag}"`);
+    } else {
+      // Otherwise, push a new item
+      existingArray.push({
+        tag: tag,
+        css: css,
+        enabled: true,
+      });
+    }
+
+    // Save back
+    chrome.storage.local.set({ [domain]: existingArray }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('[POPUP] Storage set error:', chrome.runtime.lastError);
+        return;
+      }
+      alert(`Saved CSS for "${domain}" with tag "${tag}"!`);
+      loadAndDisplayDomains(document.getElementById('searchInput').value);
+
+      // Optionally clear inputs
+      // domainInput.value = '';
+      // tagInput.value = '';
+      // cssInput.value = '';
+    });
   });
 });
 
-function handleDeleteDomain(domain) {
-  if (!confirm(`Delete CSS for "${domain}"?`)) return;
+// -------------------------------------------------------------
+// TOGGLE ENABLED
+// -------------------------------------------------------------
+function toggleEnabled(domain, tag, isEnabled) {
+  domain = domain.toLowerCase(); // ensure consistency
+  tag = tag.toLowerCase();
 
-  console.log(`[POPUP] Deleting domain: ${domain}`);
-  chrome.storage.local.remove(domain, () => {
+  chrome.storage.local.get(domain, (result) => {
     if (chrome.runtime.lastError) {
-      console.error('[POPUP] Storage remove error:', chrome.runtime.lastError);
+      console.error('[POPUP] Storage get error:', chrome.runtime.lastError);
       return;
     }
-    loadAndDisplayDomains(document.getElementById('searchInput').value);
+    let scripts = result[domain];
+    if (!Array.isArray(scripts)) return;
+
+    const scriptObj = scripts.find((item) => item.tag === tag);
+    if (scriptObj) {
+      scriptObj.enabled = isEnabled;
+    }
+
+    chrome.storage.local.set({ [domain]: scripts }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('[POPUP] Error toggling enabled:', chrome.runtime.lastError);
+      } else {
+        console.log(`[POPUP] Toggled ${domain}|${tag} to enabled=${isEnabled}`);
+      }
+    });
+  });
+}
+
+// -------------------------------------------------------------
+// DELETE (Removes only the specific tag)
+// -------------------------------------------------------------
+function handleDelete(domain, tag) {
+  domain = domain.toLowerCase();
+  tag = tag.toLowerCase();
+
+  if (!confirm(`Delete CSS for "${domain}" (tag="${tag}")?`)) return;
+
+  chrome.storage.local.get(domain, (result) => {
+    if (chrome.runtime.lastError) {
+      console.error('[POPUP] Storage get error:', chrome.runtime.lastError);
+      return;
+    }
+
+    let scripts = result[domain];
+    if (!Array.isArray(scripts)) return;
+
+    // Remove only the item with that tag
+    scripts = scripts.filter((item) => item.tag !== tag);
+
+    // If no scripts remain, remove the domain entirely
+    if (scripts.length === 0) {
+      chrome.storage.local.remove(domain, () => {
+        if (chrome.runtime.lastError) {
+          console.error('[POPUP] Error removing domain:', chrome.runtime.lastError);
+        }
+        loadAndDisplayDomains(document.getElementById('searchInput').value);
+      });
+    } else {
+      chrome.storage.local.set({ [domain]: scripts }, () => {
+        if (chrome.runtime.lastError) {
+          console.error('[POPUP] Error saving domain array:', chrome.runtime.lastError);
+        }
+        loadAndDisplayDomains(document.getElementById('searchInput').value);
+      });
+    }
   });
 }

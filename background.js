@@ -8,49 +8,41 @@ chrome.runtime.onInstalled.addListener(() => {
     if (changeInfo.status === 'complete' && tab.url) {
       try {
         const url = new URL(tab.url);
-        const domain = url.host;
+        // Convert to lowercase to match what we do in popup.js:
+        const domain = url.host.toLowerCase(); 
         console.log(`[BG] Tab updated: domain = ${domain}`);
   
-        // Retrieve data for this domain
-        chrome.storage.local.get(domain, (results) => {
+        chrome.storage.local.get(domain, (result) => {
           if (chrome.runtime.lastError) {
             console.error(`[BG] Storage error: ${chrome.runtime.lastError}`);
             return;
           }
   
-          const data = results[domain];
-          if (!data) {
-            console.log(`[BG] No data found for ${domain}`);
+          const storedValue = result[domain];
+          if (!storedValue) {
+            console.log(`[BG] No data for ${domain}`);
             return;
           }
   
-          // 'data' might be just a string (old format) or an object { css, enabled }
-          let css = '';
-          let enabled = true; // default to true if old format
-  
-          if (typeof data === 'string') {
-            // Old format: just the CSS text
-            css = data;
-          } else if (typeof data === 'object') {
-            // New format
-            css = data.css || '';
-            enabled = data.enabled !== false; // interpret missing or anything else as true
-          }
-  
-          if (!enabled) {
-            console.log(`[BG] CSS for ${domain} is disabled, skipping injection.`);
+          // We expect storedValue to be an array of { tag, css, enabled }
+          if (!Array.isArray(storedValue)) {
+            console.log(`[BG] Unexpected format for ${domain}. Skipping injection.`);
             return;
           }
   
-          if (css) {
-            console.log(`[BG] Found CSS for ${domain} (enabled), injecting...`);
-            chrome.scripting.insertCSS({
-              target: { tabId: tabId },
-              css: css,
-            });
-          } else {
-            console.log(`[BG] No CSS found for ${domain} or it's empty.`);
-          }
+          // Inject each script that is enabled
+          storedValue.forEach((item) => {
+            if (item.enabled) {
+              const css = item.css || '';
+              if (css.trim()) {
+                console.log(`[BG] Injecting CSS for ${domain}, tag="${item.tag}"`);
+                chrome.scripting.insertCSS({
+                  target: { tabId: tabId },
+                  css: css,
+                });
+              }
+            }
+          });
         });
       } catch (err) {
         console.error('[BG] Error parsing URL or injecting CSS:', err);
