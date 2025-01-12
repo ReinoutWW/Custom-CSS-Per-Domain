@@ -5,17 +5,17 @@ let activeTabDomain = '';
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[POPUP] DOMContentLoaded');
 
-  // 1) Get the active tab's domain to highlight it first
+  // 1) Get the active tab's domain
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs && tabs.length > 0) {
       const activeTab = tabs[0];
       if (activeTab.url) {
         try {
           const url = new URL(activeTab.url);
-          activeTabDomain = url.host;  // Store globally
+          activeTabDomain = url.host;  // store globally
           console.log(`[POPUP] Active Tab Domain: ${activeTabDomain}`);
 
-          // Also set the placeholder to the domain
+          // also set the placeholder to the domain
           const domainInput = document.getElementById('domainInput');
           domainInput.placeholder = activeTabDomain;
           domainInput.value = activeTabDomain;
@@ -48,35 +48,43 @@ function loadAndDisplayDomains(searchTerm = '') {
     const domainListDiv = document.getElementById('domainList');
     domainListDiv.innerHTML = ''; // Clear current list
 
-    // Convert object to an array of [domain, css] pairs
+    // Convert object to an array of [domain, data] pairs
     let entries = Object.entries(items);
 
     // 1) Filter entries based on searchTerm (case-insensitive)
     if (searchTerm.trim()) {
       const lowerSearch = searchTerm.toLowerCase();
-      entries = entries.filter(([domain]) => 
+      entries = entries.filter(([domain]) =>
         domain.toLowerCase().includes(lowerSearch)
       );
     }
 
-    // 2) Sort so the active tab's domain is at the top if it exists in entries
+    // 2) Sort so the active tab's domain is at the top if it exists
     entries.sort((a, b) => {
-      // If a[0] is the active domain, put it first
       if (a[0] === activeTabDomain) return -1;
-      // If b[0] is the active domain, put it first
       if (b[0] === activeTabDomain) return 1;
-      // Otherwise, normal alphabetical sort
       return a[0].localeCompare(b[0]);
     });
 
-    // If no domains after filtering
     if (entries.length === 0) {
       domainListDiv.innerText = 'No domains saved yet.';
       return;
     }
 
     // 3) Build and display the domain list
-    for (const [domain, css] of entries) {
+    for (const [domain, data] of entries) {
+      // data might be a string (old format) or object { css, enabled }
+      let css = '';
+      let enabled = true; // default
+
+      if (typeof data === 'string') {
+        // old format
+        css = data;
+      } else if (typeof data === 'object') {
+        css = data.css || '';
+        enabled = data.enabled !== false;
+      }
+
       // Outer container
       const domainItem = document.createElement('div');
       domainItem.className = 'domain-item';
@@ -85,16 +93,40 @@ function loadAndDisplayDomains(searchTerm = '') {
       const header = document.createElement('div');
       header.className = 'domain-header';
 
+      // Left side: Checkbox + domain name
+      const checkboxAndName = document.createElement('div');
+      checkboxAndName.className = 'checkbox-and-name';
+
+      // The checkbox
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = enabled; // set from storage
+      checkbox.addEventListener('change', () => {
+        // Update 'enabled' status in storage
+        const newData = { css, enabled: checkbox.checked };
+        chrome.storage.local.set({ [domain]: newData }, () => {
+          if (chrome.runtime.lastError) {
+            console.error('[POPUP] Error toggling enabled:', chrome.runtime.lastError);
+          } else {
+            console.log(`[POPUP] Toggled ${domain} to enabled=${checkbox.checked}`);
+          }
+        });
+      });
+
       const domainName = document.createElement('span');
       domainName.className = 'domain-name';
       domainName.textContent = domain;
 
+      checkboxAndName.appendChild(checkbox);
+      checkboxAndName.appendChild(domainName);
+
+      // Delete button (right side)
       const deleteBtn = document.createElement('button');
       deleteBtn.className = 'delete-button';
       deleteBtn.textContent = 'Delete';
       deleteBtn.addEventListener('click', () => handleDeleteDomain(domain));
 
-      header.appendChild(domainName);
+      header.appendChild(checkboxAndName);
       header.appendChild(deleteBtn);
 
       // The CSS
@@ -126,20 +158,23 @@ document.getElementById('saveBtn').addEventListener('click', () => {
     return;
   }
 
-  const data = {};
-  data[domain] = css;
+  // We'll always store in the new format { css, enabled }
+  const data = {
+    css: css,
+    enabled: true,  // By default, newly added domain is enabled
+  };
 
   console.log(`[POPUP] Saving CSS for domain "${domain}":`, css);
 
-  chrome.storage.local.set(data, () => {
+  chrome.storage.local.set({ [domain]: data }, () => {
     if (chrome.runtime.lastError) {
       console.error('[POPUP] Storage set error:', chrome.runtime.lastError);
       return;
     }
 
     alert(`Saved CSS for "${domain}"`);
-    // Reload the list (this will also sort and possibly put it on top if it's the active domain)
     loadAndDisplayDomains(document.getElementById('searchInput').value);
+
     // Optionally clear inputs
     // domainInput.value = '';
     // cssInput.value = '';
